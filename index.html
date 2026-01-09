@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Stranger Things Quiz</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- 🔴 DEMOGORGON FAVICON -->
+<link rel="icon" type="image/webp" href="favicon.webp">
+
+<!-- FONTS -->
+<link href="https://fonts.googleapis.com/css2?family=Nosifer&family=Creepster&family=Orbitron&display=swap" rel="stylesheet">
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top, #1a0033, #000);
+  color: white;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.wrapper {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.container {
+  width: 90%;
+  max-width: 700px;
+  background: rgba(0,0,0,0.92);
+  padding: 30px;
+  border-radius: 18px;
+  box-shadow: 0 0 40px crimson;
+  text-align: center;
+}
+
+.hidden { display: none; }
+
+.title {
+  font-family: 'Nosifer', cursive;
+  font-size: 2.8rem;
+  color: crimson;
+}
+
+.subtitle {
+  font-family: 'Creepster', cursive;
+  font-size: 1.5rem;
+  color: #ffb3b3;
+  margin-bottom: 25px;
+}
+
+button {
+  padding: 14px 30px;
+  border: none;
+  border-radius: 12px;
+  background: crimson;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+button:hover { background: darkred; }
+
+#timer, #qno {
+  color: #ff8080;
+  margin: 8px 0;
+}
+
+#question {
+  font-size: 1.3rem;
+  margin: 15px 0;
+}
+
+.option {
+  border: 2px solid crimson;
+  padding: 12px;
+  margin: 10px 0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.option:hover {
+  background: #240033;
+  transform: scale(1.02);
+}
+
+.option.disabled {
+  pointer-events: none;
+}
+
+.correct {
+  background-color: #0f9d58 !important;
+  border-color: #0f9d58 !important;
+}
+
+.wrong {
+  background-color: #d93025 !important;
+  border-color: #d93025 !important;
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrapper">
+
+<!-- START PAGE -->
+<div class="container" id="startPage">
+  <div class="title">STRANGER THINGS</div>
+  <div class="subtitle">ENTER THE UPSIDE DOWN</div>
+  <button id="startBtn">START QUIZ</button>
+</div>
+
+<!-- QUIZ PAGE -->
+<div class="container hidden" id="quizPage">
+  <div id="timer">Time Left: <span id="time">15</span>s</div>
+  <div id="qno"></div>
+  <div id="question"></div>
+  <div id="options"></div>
+</div>
+
+<!-- RESULT PAGE -->
+<div class="container hidden" id="resultPage">
+  <div class="title">QUIZ COMPLETED</div>
+  <p id="scoreText"></p>
+  <button onclick="location.reload()">PLAY AGAIN</button>
+</div>
+
+</div>
+
+<!-- 🔊 SOUNDS -->
+<audio id="startSound" src="start.mp3"></audio>
+<audio id="correctSound" src="correct.mp3"></audio>
+<audio id="wrongSound" src="wrong.mp3"></audio>
+
+<script>
+const questions = [
+  { q:"Which experiment inspired Hawkins Lab?", options:["MKUltra","Blue Book","Pegasus","Paperclip"], answer:0 },
+  { q:"What weakens Upside Down creatures?", options:["Light","Cold","Heat","Water"], answer:2 },
+  { q:"Demogorgons primarily sense via?", options:["Smell","Sight","Sound","Echolocation"], answer:3 },
+  { q:"Which geometry explains the Upside Down?", options:["Euclidean","Non-Euclidean","Linear","Boolean"], answer:1 },
+  { q:"What number is Eleven?", options:["009","010","011","012"], answer:2 },
+  { q:"Who first opens the gate?", options:["Joyce","Hopper","Eleven","Brenner"], answer:2 },
+  { q:"Mind Flayer controls victims using?", options:["Magic","Neural possession","Dreams","Radiation"], answer:1 },
+  { q:"Which song saves Max?", options:["Africa","Take On Me","Running Up That Hill","Sweet Dreams"], answer:2 },
+  { q:"Which season introduces Vecna?", options:["S2","S3","S4","S5"], answer:2 },
+  { q:"Upside Down symbolizes?", options:["Fantasy","Cold War paranoia","Dreams","Technology"], answer:1 }
+];
+
+let index = 0, score = 0, time = 15, timer;
+
+const startBtn = document.getElementById("startBtn");
+const startPage = document.getElementById("startPage");
+const quizPage = document.getElementById("quizPage");
+const resultPage = document.getElementById("resultPage");
+
+const qEl = document.getElementById("question");
+const optEl = document.getElementById("options");
+const timeEl = document.getElementById("time");
+const qnoEl = document.getElementById("qno");
+
+const startSound = document.getElementById("startSound");
+const correctSound = document.getElementById("correctSound");
+const wrongSound = document.getElementById("wrongSound");
+
+startBtn.onclick = () => {
+  startSound.play();
+  startPage.classList.add("hidden");
+  quizPage.classList.remove("hidden");
+  loadQuestion();
+};
+
+function loadQuestion() {
+  clearInterval(timer);
+  time = 15;
+  timeEl.textContent = time;
+  optEl.innerHTML = "";
+
+  qnoEl.textContent = `Question ${index + 1} of ${questions.length}`;
+  qEl.textContent = questions[index].q;
+
+  questions[index].options.forEach((opt,i)=>{
+    const div = document.createElement("div");
+    div.className = "option";
+    div.textContent = opt;
+    div.onclick = () => checkAnswer(i, div);
+    optEl.appendChild(div);
+  });
+
+  timer = setInterval(()=>{
+    time--;
+    timeEl.textContent = time;
+    if(time === 0) next();
+  },1000);
+}
+
+function checkAnswer(i, el){
+  clearInterval(timer);
+  const options = document.querySelectorAll(".option");
+  options.forEach(o => o.classList.add("disabled"));
+
+  if(i === questions[index].answer){
+    score++;
+    correctSound.play();
+    el.classList.add("correct");
+  } else {
+    wrongSound.play();
+    el.classList.add("wrong");
+    options[questions[index].answer].classList.add("correct");
+  }
+
+  setTimeout(next, 1200);
+}
+
+function next(){
+  index++;
+  index < questions.length ? loadQuestion() : showResult();
+}
+
+function showResult(){
+  quizPage.classList.add("hidden");
+  resultPage.classList.remove("hidden");
+  document.getElementById("scoreText").textContent =
+    `Your Score: ${score} / ${questions.length}`;
+}
+</script>
+
+</body>
+</html>
